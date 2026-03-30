@@ -1,0 +1,161 @@
+<!DOCTYPE html>
+<html lang="uk">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+    <title>GGStandoff Case Opening</title>
+    <script src="https://telegram.org/js/telegram-web-app.js"></script>
+    <style>
+        :root {
+            --bg-color: #0f111a;
+            --accent-color: #ff9d00;
+            --rarity-rare: #4b69ff;
+            --rarity-arcane: #eb4b4b;
+        }
+
+        body {
+            background-color: var(--bg-color);
+            color: white;
+            font-family: 'Segoe UI', sans-serif;
+            margin: 0;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            height: 100vh;
+            overflow: hidden;
+        }
+
+        /* Контейнер рулетки */
+        .roulette-wrapper {
+            position: relative;
+            width: 100%;
+            max-width: 500px;
+            height: 150px;
+            border-top: 2px solid #333;
+            border-bottom: 2px solid #333;
+            overflow: hidden;
+        }
+
+        /* Червона лінія-покажчик по центру */
+        .pointer {
+            position: absolute;
+            top: 0;
+            left: 50%;
+            transform: translateX(-50%);
+            width: 4px;
+            height: 100%;
+            background: red;
+            z-index: 10;
+            box-shadow: 0 0 10px rgba(255, 0, 0, 0.5);
+        }
+
+        .cases-line {
+            display: flex;
+            transition: transform 5s cubic-bezier(0.15, 0, 0.05, 1);
+            will-change: transform;
+            padding-left: 50%; /* Щоб перший скін був за центром */
+        }
+
+        .skin-card {
+            min-width: 120px;
+            height: 150px;
+            margin-right: 10px;
+            background: linear-gradient(180deg, #222 0%, #111 100%);
+            border-bottom: 5px solid var(--rarity-rare);
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            font-size: 10px;
+            text-align: center;
+        }
+
+        .btn-open {
+            margin-top: 50px;
+            padding: 15px 40px;
+            background: var(--accent-color);
+            border: none;
+            color: black;
+            font-weight: bold;
+            border-radius: 5px;
+            cursor: pointer;
+            text-transform: uppercase;
+        }
+
+        .btn-open:disabled {
+            background: #555;
+        }
+    </style>
+</head>
+<body>
+
+    <h2 id="status">Оберіть кейс</h2>
+
+    <div class="roulette-wrapper">
+        <div class="pointer"></div>
+        <div class="cases-line" id="casesLine">
+            </div>
+    </div>
+
+    <button class="btn-open" id="openBtn" onclick="spin()">Відкрити</button>
+
+    <script>
+        const tg = window.Telegram.WebApp;
+        tg.expand(); // Розгортаємо на весь екран
+
+        const casesLine = document.getElementById('casesLine');
+        const openBtn = document.getElementById('openBtn');
+        const status = document.getElementById('status');
+
+        // Список можливих скінів (в реальності краще отримувати з бота)
+        const skins = [
+            { name: "AKR Tiger", rarity: "#4b69ff" },
+            { name: "M4 Lizard", rarity: "#8847ff" },
+            { name: "G22 Frosty", rarity: "#eb4b4b" },
+            { name: "Karambit Gold", rarity: "#caab05" }
+        ];
+
+        // Генеруємо випадкову лінію скінів для візуалізації
+        function initRoulette() {
+            casesLine.innerHTML = '';
+            for (let i = 0; i < 50; i++) {
+                const randomSkin = skins[Math.floor(Math.random() * skins.length)];
+                const card = document.createElement('div');
+                card.className = 'skin-card';
+                card.style.borderBottomColor = randomSkin.rarity;
+                card.innerHTML = `<strong>${randomSkin.name}</strong>`;
+                casesLine.appendChild(card);
+            }
+        }
+
+        function spin() {
+            openBtn.disabled = true;
+            status.innerText = "Крутимо...";
+
+            const cardWidth = 130; // 120px + 10px margin
+            const winnerIndex = 40; // Який скін випаде (ближче до кінця)
+            const offset = (winnerIndex * cardWidth) + (cardWidth / 2);
+            
+            // Запускаємо анімацію
+            casesLine.style.transform = `translateX(-${offset}px)`;
+
+            // Чекаємо завершення анімації (5 секунд)
+            setTimeout(() => {
+                const winner = skins[Math.floor(Math.random() * skins.length)];
+                status.innerText = `Ви вибили: ${winner.name}!`;
+                
+                // ВІДПРАВКА ДАНИХ В БОТ
+                tg.sendData(JSON.stringify({
+                    skin: winner.name,
+                    action: "case_opened"
+                }));
+                
+                // Telegram автоматично закриє WebApp після sendData
+            }, 5500);
+        }
+
+        initRoulette();
+    </script>
+</body>
+</html>
